@@ -87,6 +87,14 @@ export class Operation {
       "exitRectangleMarkMode": () => {
         this.editor.toggleRectangleMarkMode();
       },
+
+      //extensions
+      "flushLines": () => {
+        this.editor.flushLines();
+      },
+      "keepLines": () => {
+        this.editor.keepLines();
+      },
     };
   }
 

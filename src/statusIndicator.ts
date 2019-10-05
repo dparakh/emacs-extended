@@ -19,6 +19,9 @@ const IconMapper = {
   [Mode.Cua]: "clippy",
   [Mode.Register]: "server",
   [Mode.RectangleMark]: "three-bars",
+  [Mode.RegisterInsert]: "three-bars",
+  [Mode.RegisterSave]: "three-bars",
+  [Mode.NoKeyBinding]: "three-bars",
 };
 export default class StatusIndicator {
   private statusBarItem: StatusBarItem;

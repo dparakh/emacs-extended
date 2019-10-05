@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { window } from 'vscode';
 import KillRing from "./killring";
 import Register from "./registers";
 import * as sexp from "./sexp";
@@ -46,10 +47,10 @@ export class Editor {
       vscode.commands.executeCommand("cancelSelection");
       this.status.deactivate(Mode.Mark);
     } else {
-      const editor = vscode.window.activeTextEditor;
-      if (editor) {
-        const currentPosition: vscode.Position = editor.selection.active;
-        editor.selection = new vscode.Selection(currentPosition, currentPosition);
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        const currentPosition: vscode.Position = activeEditor.selection.active;
+        activeEditor.selection = new vscode.Selection(currentPosition, currentPosition);
         this.status.activate(Mode.Mark);
       }
     }
@@ -60,10 +61,10 @@ export class Editor {
       vscode.commands.executeCommand("cancelSelection");
       this.status.deactivate(Mode.RectangleMark);
     } else {
-      const editor = vscode.window.activeTextEditor;
-      if (editor) {
-        const currentPosition: vscode.Position = editor.selection.active;
-        editor.selection = new vscode.Selection(currentPosition, currentPosition);
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor) {
+        const currentPosition: vscode.Position = activeEditor.selection.active;
+        activeEditor.selection = new vscode.Selection(currentPosition, currentPosition);
         this.status.activate(Mode.RectangleMark);
       }
     }
@@ -87,15 +88,15 @@ export class Editor {
   }
 
   public changeCase = (casing: "upper" | "lower" | "capitalise", type: "position" | "region") => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      const region = editor.selection;
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const region = activeEditor.selection;
       let currentSelection: {
         text: string,
         range?: vscode.Range,
       } | undefined;
       if (type === "position" && region.start.character === region.end.character) {
-        const document = editor.document;
+        const document = activeEditor.document;
         const range = document.getWordRangeAtPosition(region.start);
 
         currentSelection = {
@@ -103,7 +104,7 @@ export class Editor {
           range,
         };
       } else if (type === "region" && region.start.character !== region.end.character) {
-        currentSelection = this.getSelectedText(region, editor.document);
+        currentSelection = this.getSelectedText(region, activeEditor.document);
       } else {
         this.status.setStatusBarMessage("No region selected. Command aborted.");
         return;
@@ -117,7 +118,7 @@ export class Editor {
           casing === "lower" ? currentSelection.text.toLowerCase() :
           currentSelection.text.charAt(0).toUpperCase() + currentSelection.text.slice(1);
 
-          editor.edit(builder => {
+          activeEditor.edit(builder => {
             builder.replace(selectedRange, newText);
             });
         }
@@ -143,9 +144,9 @@ export class Editor {
   }
 
   public getSelectionRange(): vscode.Range | null {
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      const selection = editor.selection;
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const selection = activeEditor.selection;
       const start = selection.start;
       const end = selection.end;
 
@@ -173,9 +174,9 @@ export class Editor {
   }
 
   public setSelection(start: vscode.Position, end: vscode.Position): void {
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      editor.selection = new vscode.Selection(start, end);
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      activeEditor.selection = new vscode.Selection(start, end);
     }
   }
 
@@ -192,7 +193,7 @@ export class Editor {
     if (whatAmI === sexp.Expression.Atom) {
       vscode.commands.executeCommand("cursorWordRight").then(() => {
         if (activateMarkMode) {
-          const editor = vscode.window.activeTextEditor;
+          const activeEditor = vscode.window.activeTextEditor;
           const pos = this.getSelection();
           if (pos) {
             this.setSelection(startPos.start, pos.end);
@@ -203,7 +204,7 @@ export class Editor {
       vscode.commands.executeCommand("editor.action.jumpToBracket").then(() => {
         vscode.commands.executeCommand("cursorWordRight").then(() => {
           if (activateMarkMode) {
-            const editor = vscode.window.activeTextEditor;
+            const activeEditor = vscode.window.activeTextEditor;
             const pos = this.getSelection();
             if (pos) {
               this.setSelection(startPos.start, pos.end);
@@ -278,6 +279,10 @@ export class Editor {
 
       if (!range.isEmpty) {
         this.killText(range, false);
+      } else {
+          //if range is empty, we kill the current line
+          const lineRange = new vscode.Range(range.start.line, 0, range.start.line+1, 0);
+          this.killText(lineRange, false);
       }
       this.lastKill = range.start;
     }
@@ -288,11 +293,23 @@ export class Editor {
       return;
     }
 
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      const range = editor.selection;
-      this.killRing.save(editor.document.getText(range));
-      vscode.commands.executeCommand("emacs.exitMarkMode");
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const range = activeEditor.selection;
+      if (range.isEmpty){
+        //if range is empty, we copy the current line
+        const lineRange = new vscode.Range(range.start.line, 0, range.start.line+1, 0);
+        this.killRing.save(activeEditor.document.getText(lineRange));
+        //get current position...
+        const position = range.active;
+        //move to beginning of line.
+        var newPosition = position.with(position.line, 0);
+        var newSelection = new vscode.Selection(newPosition, newPosition);
+        activeEditor.selection = newSelection;
+      } else {
+        this.killRing.save(activeEditor.document.getText(range));
+        vscode.commands.executeCommand("emacs.exitMarkMode");
+      }
     }
   }
 
@@ -300,17 +317,17 @@ export class Editor {
     if (!this.validateCuaCommand() || this.killRing.isEmpty()) {
       return;
     }
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      const currPos = editor.selection.start;
-      editor.edit((editBuilder) => {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const currPos = activeEditor.selection.start;
+      activeEditor.edit((editBuilder) => {
         const topText = this.killRing.top();
         const selection = this.getSelection();
         if (selection) {
           editBuilder.insert(selection.active, topText);
         }
       }).then(() => {
-        const textRange = new vscode.Range(currPos, editor.selection.end);
+        const textRange = new vscode.Range(currPos, activeEditor.selection.end);
         this.killRing.setLastInsertedRange(textRange);
       });
       this.lastKill = null;
@@ -322,9 +339,9 @@ export class Editor {
       return false;
     }
 
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      const currentPosition = editor.selection.active;
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const currentPosition = activeEditor.selection.active;
       const lastInsertionRange = this.killRing.getLastRange();
 
       if (lastInsertionRange) {
@@ -335,7 +352,7 @@ export class Editor {
       }
 
       const oldInsertionPoint = this.killRing.getLastInsertionPoint();
-      editor.edit((editBuilder) => {
+      activeEditor.edit((editBuilder) => {
         this.killRing.backward();
         const prevText = this.killRing.top();
         const lastRange = this.killRing.getLastRange();
@@ -344,9 +361,9 @@ export class Editor {
         }
       }).then(() => {
         if (oldInsertionPoint) {
-          const textRange = new vscode.Range(oldInsertionPoint, editor.selection.end);
+          const textRange = new vscode.Range(oldInsertionPoint, activeEditor.selection.end);
           this.killRing.setLastInsertedRange(textRange);
-          editor.selection = new vscode.Selection(textRange.start, textRange.end);
+          activeEditor.selection = new vscode.Selection(textRange.start, textRange.end);
         }
       });
     }
@@ -358,33 +375,35 @@ export class Editor {
   }
 
   public deleteBlankLines(): void {
-    const editor = vscode.window.activeTextEditor;
-    if (editor)
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor)
     {
-      const doc = editor.document;
+      const doc = activeEditor.document;
       const promises = [];
       let selection = this.getSelection();
-      let anchor = selection.anchor;
-      let range = doc.lineAt(selection.start.line).range;
-      let nextLine: vscode.Position;
+      if (selection) {
+        let anchor = selection.anchor;
+        let range = doc.lineAt(selection.start.line).range;
+        let nextLine: vscode.Position;
 
-      if (range.isEmpty) {
-        range = this.getFirstBlankLine(range);
-        anchor = range.start;
-        nextLine = range.start;
-      } else {
-        nextLine = range.start.translate(1, 0);
+        if (range.isEmpty) {
+          range = this.getFirstBlankLine(range);
+          anchor = range.start;
+          nextLine = range.start;
+        } else {
+          nextLine = range.start.translate(1, 0);
+        }
+        selection = new vscode.Selection(nextLine, nextLine);
+        activeEditor.selection = selection;
+        for (let line = selection.start.line;
+              line < doc.lineCount - 1  && doc.lineAt(line).range.isEmpty;
+              ++line) {
+            promises.push(vscode.commands.executeCommand("deleteRight"));
+        }
+        Promise.all(promises).then(() => {
+            activeEditor.selection = new vscode.Selection(anchor, anchor);
+        });
       }
-      selection = new vscode.Selection(nextLine, nextLine);
-      editor.selection = selection;
-      for (let line = selection.start.line;
-            line < doc.lineCount - 1  && doc.lineAt(line).range.isEmpty;
-            ++line) {
-          promises.push(vscode.commands.executeCommand("deleteRight"));
-      }
-      Promise.all(promises).then(() => {
-          editor.selection = new vscode.Selection(anchor, anchor);
-      });
     }
   }
 
@@ -394,39 +413,45 @@ export class Editor {
   }
 
   public copyRectangle(): void {
-    const selections = vscode.window.activeTextEditor.selections;
-    let str = "";
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const selections = activeEditor.selections;
+      let str = "";
 
-    for (const s of selections) {
-      const lineText = vscode.window.activeTextEditor.document.getText(s);
-      str += `${lineText}\n`;
+      for (const s of selections) {
+        const lineText = activeEditor.document.getText(s);
+        str += `${lineText}\n`;
+      }
+
+      this.lastRectangularKill = str;
     }
-
-    this.lastRectangularKill = str;
   }
 
   public killRectangle(): void {
-    const selections = vscode.window.activeTextEditor.selections;
-    let str = "";
-    const deletes: Array<Thenable<boolean>> = [];
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const selections = activeEditor.selections;
+      let str = "";
+      const deletes: Array<Thenable<boolean>> = [];
 
-    for (const s of selections) {
-      const lineText = vscode.window.activeTextEditor.document.getText(s);
-      str += `${lineText}\n`;
-      const asRange: vscode.Range = new vscode.Range(s.start, s.end);
+      for (const s of selections) {
+        const lineText = activeEditor.document.getText(s);
+        str += `${lineText}\n`;
+        const asRange: vscode.Range = new vscode.Range(s.start, s.end);
 
-      deletes.push(this.delete(asRange));
-    }
-
-    this.lastRectangularKill = str;
-    Promise.all(deletes).then((value: boolean[]) => {
-      const allTrue = value.reduce((prev, curr) => prev && curr);
-      if (allTrue) {
-        this.status.setStatusBarMessage("Rectangle Saved!", 5000);
-      } else {
-        this.status.setStatusBarMessage("Error saving rectangle", 5000);
+        deletes.push(this.delete(asRange));
       }
-    });
+
+      this.lastRectangularKill = str;
+      Promise.all(deletes).then((value: boolean[]) => {
+        const allTrue = value.reduce((prev, curr) => prev && curr);
+        if (allTrue) {
+          this.status.setStatusBarMessage("Rectangle Saved!", 5000);
+        } else {
+          this.status.setStatusBarMessage("Error saving rectangle", 5000);
+        }
+      });
+    }
   }
 
   public yankRectangle(): void {
@@ -434,20 +459,21 @@ export class Editor {
       this.status.setStatusBarMessage("No rectangle has been saved", 4000);
       return;
     }
-
-    vscode.window.activeTextEditor.edit((editBuilder) => {
-      const currEditor = vscode.window.activeTextEditor;
-
-      // more than one selection
-      if (currEditor.selections.length > 1) {
-        const rectKillAsLines = this.lastRectangularKill.split("\n");
-        for (let i = 0; i < currEditor.selections.length; i++) {
-          editBuilder.replace(currEditor.selections[i], rectKillAsLines[i]);
+    const activeEditor = vscode.window.activeTextEditor;
+    const lastRectangularKill = this.lastRectangularKill;
+    if ((activeEditor) && (lastRectangularKill)) {
+      activeEditor.edit((editBuilder) => {
+        // more than one selection
+        if (activeEditor.selections.length > 1) {
+          const rectKillAsLines = lastRectangularKill.split("\n");
+          for (let i = 0; i < activeEditor.selections.length; i++) {
+            editBuilder.replace(activeEditor.selections[i], rectKillAsLines[i]);
+          }
+        } else {
+          editBuilder.replace(activeEditor.selection, lastRectangularKill);
         }
-      } else {
-        editBuilder.replace(currEditor.selection, this.lastRectangularKill);
-      }
-    });
+      });
+    }
   }
 
   public onType(text: string): void {
@@ -543,11 +569,14 @@ export class Editor {
     if (null === registerName) {
       return;
     }
-    const range: vscode.Range = this.getSelectionRange();
-    if (range !== null) {
-      const selectedText = vscode.window.activeTextEditor.document.getText(range);
-      if (null !== selectedText) {
-        this.register.saveTextToRegister(registerName, selectedText);
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const range : vscode.Range | null = this.getSelectionRange();
+      if (range !== null) {
+        const selectedText = activeEditor.document.getText(range);
+        if (null !== selectedText) {
+          this.register.saveTextToRegister(registerName, selectedText);
+        }
       }
     }
   }
@@ -555,82 +584,173 @@ export class Editor {
   public RestoreTextFromRegister(registerName: string): void {
     this.status.deactivate(Mode.Mark);
     const fromRegister = this.register.getTextFromRegister(registerName);
-    if (fromRegister !== null) {
-      vscode.window.activeTextEditor.edit((editBuilder) => {
-        editBuilder.insert(this.getSelection().active, fromRegister);
+    const selection = this.getSelection();
+    const activeEditor = vscode.window.activeTextEditor;
+    if ((fromRegister !== null) && selection && activeEditor) {
+        activeEditor.edit((editBuilder) => {
+        editBuilder.insert(selection.active, fromRegister);
       });
     } else {
       this.status.setStatusBarMessage("Register does not contain text.");
     }
   }
 
+  public async flushLines(): Promise<void> {
+		// Display a message box to the user
+		const result = await window.showInputBox({
+			value: '',
+			placeHolder: 'Enter a RegEx to flush matching lines',
+		});
+
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			const regExp = new RegExp(result || '');
+			const document = editor.document;
+			const lineCount = document.lineCount;
+			const rangesToDelete : vscode.Range[] = [];
+			for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+				const aLine = document.lineAt(lineIndex);
+				if (regExp.test(aLine.text)) {
+					const lineRange = new vscode.Range(aLine.range.start.line, 0, aLine.range.start.line+1, 0);
+					rangesToDelete.push(lineRange);
+				}
+			}
+			if (rangesToDelete.length) {
+				editor.edit(editBuilder => {
+					for (let aRange of rangesToDelete) {
+						editBuilder.delete (aRange);
+					}
+				});
+			}
+		}
+  }
+
+  public async keepLines(): Promise<void> {
+		// Display a message box to the user
+		const result = await window.showInputBox({
+			value: '',
+			placeHolder: 'Enter a RegEx to keep only matching lines',
+		});
+
+		const editor = vscode.window.activeTextEditor;
+		if (editor) {
+			const regExp = new RegExp(result || '');
+			const document = editor.document;
+			const lineCount = document.lineCount;
+			const rangesToDelete : vscode.Range[] = [];
+			for (let lineIndex = 0; lineIndex < lineCount; lineIndex++) {
+				const aLine = document.lineAt(lineIndex);
+				if (!regExp.test(aLine.text)) {
+					const lineRange = new vscode.Range(aLine.range.start.line, 0, aLine.range.start.line+1, 0);
+					rangesToDelete.push(lineRange);
+				}
+			}
+			if (rangesToDelete.length) {
+				editor.edit(editBuilder => {
+					for (let aRange of rangesToDelete) {
+						editBuilder.delete (aRange);
+					}
+				});
+			}
+		}
+  }
+
   private isRegion = (): boolean => {
-    const currRegion = vscode.window.activeTextEditor.selection;
-    return !currRegion.start.isEqual(currRegion.end);
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const currRegion = activeEditor.selection;
+      return !currRegion.start.isEqual(currRegion.end);
+    }
+    else {
+      return false;
+    }
   }
 
   private killEndOfLine(killRepeated: boolean): void {
-    const currentCursorPosition = vscode.window.activeTextEditor.selection.active;
-    vscode.commands.executeCommand("emacs.cursorEnd")
-    .then(() => {
-      const newCursorPos = vscode.window.activeTextEditor.selection.active;
-      const rangeTillEnd = new vscode.Range(currentCursorPosition, newCursorPos);
-      if (rangeTillEnd.isEmpty) {
-        vscode.commands.executeCommand("editor.action.deleteLines").then(() => {
-          this.killRing.append("\n");
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const currentCursorPosition = activeEditor.selection.active;
+      vscode.commands.executeCommand("emacs.cursorEnd")
+      .then(() => {
+        const newCursorPos = activeEditor.selection.active;
+        const rangeTillEnd = new vscode.Range(currentCursorPosition, newCursorPos);
+        if (rangeTillEnd.isEmpty) {
+          vscode.commands.executeCommand("editor.action.deleteLines").then(() => {
+            this.killRing.append("\n");
+          });
+        }
+
+        return activeEditor.document.getText(rangeTillEnd);
+      }).then((text: string) => {
+        activeEditor.selection.active = currentCursorPosition;
+        vscode.commands.executeCommand("deleteRight").then(() => {
+          killRepeated ? this.killRing.append(text) : this.killRing.save(text);
         });
-      }
-
-      return vscode.window.activeTextEditor.document.getText(rangeTillEnd);
-    }).then((text: string) => {
-      vscode.window.activeTextEditor.selection.active = currentCursorPosition;
-      vscode.commands.executeCommand("deleteRight").then(() => {
-        killRepeated ? this.killRing.append(text) : this.killRing.save(text);
       });
-    });
 
-    this.toggleMarkMode();
+      this.toggleMarkMode();
+    }
   }
 
   private killText(range: vscode.Range, killRepeated: boolean): void {
-    const text = vscode.window.activeTextEditor.document.getText(range);
-    const promises = [
-      this.delete(range),
-    ];
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const text = activeEditor.document.getText(range);
+      const promises = [
+        this.delete(range),
+      ];
 
-    Promise.all(promises).then(() => {
-      this.status.deactivate(Mode.Mark);
-      killRepeated ? this.killRing.append(text) : this.killRing.save(text);
-    });
+      Promise.all(promises).then(() => {
+        this.status.deactivate(Mode.Mark);
+        killRepeated ? this.killRing.append(text) : this.killRing.save(text);
+      });
+    }
   }
 
-  private delete(range: vscode.Range = null): Thenable<boolean> {
-    if (range === null) {
-      const start = new vscode.Position(0, 0);
-      const doc = vscode.window.activeTextEditor.document;
-      const end = doc.lineAt(doc.lineCount - 1).range.end;
+  private delete(range: vscode.Range | null = null): Thenable<boolean> {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      if (range === null) {
+        const start = new vscode.Position(0, 0);
+        const doc = activeEditor.document;
+        const end = doc.lineAt(doc.lineCount - 1).range.end;
 
-      range = new vscode.Range(start, end);
+        range = new vscode.Range(start, end);
+      }
+
+      return activeEditor.edit((editBuilder) => {
+          if (range) {
+            editBuilder.delete(range);
+          }
+        });
+    } else {
+      return new Promise((resolve,reject) => {
+            reject(false);
+        });      
     }
-    return vscode.window.activeTextEditor.edit((editBuilder) => {
-      editBuilder.delete(range);
-    });
+
   }
 
   private getFirstBlankLine(range: vscode.Range): vscode.Range {
-    const doc = vscode.window.activeTextEditor.document;
 
-    if (range.start.line === 0) {
-      return range;
-    }
-    range = doc.lineAt(range.start.line - 1).range;
-    while (range.start.line > 0 && range.isEmpty) {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      const doc = activeEditor.document;
+
+      if (range.start.line === 0) {
+        return range;
+      }
       range = doc.lineAt(range.start.line - 1).range;
-    }
-    if (range.isEmpty) {
-      return range;
+      while (range.start.line > 0 && range.isEmpty) {
+        range = doc.lineAt(range.start.line - 1).range;
+      }
+      if (range.isEmpty) {
+        return range;
+      } else {
+        return doc.lineAt(range.start.line + 1).range;
+      }
     } else {
-      return doc.lineAt(range.start.line + 1).range;
+      return new vscode.Range(0, 0, 0, 0);
     }
   }
 }

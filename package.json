@@ -16,14 +16,6 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "extension.flush-lines",
-				"title": "flush-lines"
-			},
-			{
-				"command": "extension.keep-lines",
-				"title": "keep-lines"
-			},
-			{
 				"command": "emacs.kill",
 				"title": "Cut the text from cursor to line end and save it in emacs kill ring"
 			},
@@ -42,6 +34,14 @@
 			{
 				"command": "emacs.toggleCuaMode",
 				"title": "Toggle cua mode"
+			},
+			{
+				"command": "emacs.flushLines",
+				"title": "flush-lines"
+			},
+			{
+				"command": "emacs.keepLines",
+				"title": "keep-lines"
 			}
 		],
 		"keybindings": [

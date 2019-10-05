@@ -38,6 +38,8 @@ export function activate(context: vscode.ExtensionContext): void {
     "exitMarkMode",
     "enterRectangleMarkMode",
     "exitRectangleMarkMode",
+    "flushLines",
+    "keepLines",
   ];
 
   const cursorMoves: string[] = [
