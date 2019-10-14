@@ -514,6 +514,11 @@
 				"key": "numpad_multiply",
 				"command": "emacs.undo",
 				"when": "editorTextFocus"
+			},
+			{
+				"key": "tab",
+				"command": "editor.action.formatSelection",
+				"when": "editorTextFocus"
 			}
 		]
 	},
