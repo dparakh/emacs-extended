@@ -2,6 +2,7 @@
 	"name": "emacs-extended",
 	"displayName": "emacs extended",
 	"description": "An extension of Robert Kwan's emacs-improved extension.",
+	"publisher": "dparakh",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.38.0"
@@ -513,12 +514,7 @@
 				"key": "numpad_multiply",
 				"command": "emacs.undo",
 				"when": "editorTextFocus"
-			},
-			{
-				"key": "tab",
-				"command": "editor.action.reindentselectedlines",
-				"when": "editorTextFocus"
-			}			
+			}
 		]
 	},
 	"scripts": {

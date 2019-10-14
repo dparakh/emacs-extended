@@ -1,6 +1,6 @@
 # emacs-extended README
 
-This is the README for your extension "emacs-extended". After writing up a brief description, we recommend including the following sections.
+This is an extension of Robert Kwan's emacs-improved extension.
 
 ## Features
 
