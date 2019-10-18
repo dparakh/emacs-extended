@@ -95,6 +95,9 @@ export class Operation {
       "keepLines": () => {
         this.editor.keepLines();
       },
+      "shell": () => {
+        this.editor.shell();
+      },
     };
   }
 

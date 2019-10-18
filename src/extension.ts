@@ -40,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
     "exitRectangleMarkMode",
     "flushLines",
     "keepLines",
+    "shell",
   ];
 
   const cursorMoves: string[] = [

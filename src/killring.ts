@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { Range } from "vscode";
 
 export default class KillRing {
@@ -16,6 +17,7 @@ export default class KillRing {
   public save = (text: string) => {
     this.items[this.pointer] = text;
     this.pointer = (this.pointer + 1) % this.MAX_LENGTH;
+    vscode.env.clipboard.writeText(text);
   }
 
   public top = () => {

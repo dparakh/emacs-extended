@@ -625,6 +625,8 @@ export class Editor {
 		}
   }
 
+  
+
   public async keepLines(): Promise<void> {
 		// Display a message box to the user
 		const result = await window.showInputBox({
@@ -654,6 +656,30 @@ export class Editor {
 			}
 		}
   }
+
+
+
+  public shell() : void {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      let activeTerminal = vscode.window.activeTerminal;
+  
+      if (activeTerminal) {
+      }
+      else {
+        activeTerminal = vscode.window.createTerminal();
+      }
+  
+      if (activeTerminal) {
+        let pathToFile = activeEditor.document.uri.fsPath;
+        activeTerminal.sendText('cd $(dirname ' + pathToFile + ')');
+        activeTerminal.show(false);
+      }
+    }
+      
+  }
+
+
 
   private isRegion = (): boolean => {
     const activeEditor = vscode.window.activeTextEditor;

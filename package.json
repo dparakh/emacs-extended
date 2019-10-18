@@ -43,6 +43,10 @@
 			{
 				"command": "emacs.keepLines",
 				"title": "keep-lines"
+			},
+			{
+				"command": "emacs.shell",
+				"title": "shell"
 			}
 		],
 		"keybindings": [
@@ -518,6 +522,11 @@
 			{
 				"key": "tab",
 				"command": "editor.action.formatSelection",
+				"when": "editorTextFocus"
+			},
+			{
+				"key": "alt+shift+1",
+				"command": "emacs.shell",
 				"when": "editorTextFocus"
 			}
 		]
