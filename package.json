@@ -3,6 +3,10 @@
 	"displayName": "emacs extended",
 	"description": "An extension of Robert Kwan's emacs-improved extension.",
 	"publisher": "dparakh",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/dparakh/emacs-extended.git"
+	},
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.38.0"
