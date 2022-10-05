@@ -672,7 +672,7 @@ export class Editor {
   
       if (activeTerminal) {
         let pathToFile = activeEditor.document.uri.fsPath;
-        activeTerminal.sendText('cd $(dirname ' + pathToFile + ')');
+        activeTerminal.sendText('cd $(dirname "' + pathToFile + '")');
         activeTerminal.show(false);
       }
     }
