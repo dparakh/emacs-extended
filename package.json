@@ -217,7 +217,7 @@
 			},
 			{
 				"key": "ctrl+x o",
-				"command": "workbench.action.moveEditorToNextGroup"
+				"command": "workbench.action.focusNextGroup"
 			},
 			{
 				"key": "ctrl+alt+n",
