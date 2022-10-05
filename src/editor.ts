@@ -313,26 +313,30 @@ export class Editor {
     }
   }
 
-  public yank(): void {
-    if (!this.validateCuaCommand() || this.killRing.isEmpty()) {
-      return;
+    public yank(): void {
+        vscode.env.clipboard.readText().then((clipboardText) => {
+            if (!this.validateCuaCommand() || (this.killRing.isEmpty() && (!clipboardText))) {
+                return;
+            }
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+                const currPos = activeEditor.selection.start;
+                activeEditor.edit((editBuilder) => {
+                    const topText = this.killRing.top();
+                    const textToPaste = (clipboardText ? clipboardText : topText);
+                    const selection = this.getSelection();
+                    if (selection) {
+                        editBuilder.insert(selection.active, textToPaste);
+                    }
+                }).then(() => {
+                    const textRange = new vscode.Range(currPos, activeEditor.selection.end);
+                    this.killRing.setLastInsertedRange(textRange);
+                });
+                this.lastKill = null;
+            }
+        });
+
     }
-    const activeEditor = vscode.window.activeTextEditor;
-    if (activeEditor) {
-      const currPos = activeEditor.selection.start;
-      activeEditor.edit((editBuilder) => {
-        const topText = this.killRing.top();
-        const selection = this.getSelection();
-        if (selection) {
-          editBuilder.insert(selection.active, topText);
-        }
-      }).then(() => {
-        const textRange = new vscode.Range(currPos, activeEditor.selection.end);
-        this.killRing.setLastInsertedRange(textRange);
-      });
-      this.lastKill = null;
-    }
-  }
 
   public yankPop() {
     if (this.killRing.isEmpty()) {
